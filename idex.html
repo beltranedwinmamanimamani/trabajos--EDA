@@ -1,0 +1,113 @@
+
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta de Proximidad de Repartidores</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+        #repartidores {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Encuentra el Repartidor mas Cercano-en la Provincia de San Roman Juliaca</h1>
+    <div id="map"></div>
+    <div id="repartidores">
+        <h2>Repartidores Cercanos</h2>
+        <ul id="lista-repartidores"></ul>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        // Definir los repartidores con coordenadas de ejemplo para Juliaca
+        const repartidores = [
+            { id: 1, nombre: 'Repartidor 1', lat: -15.4997, lng: -70.1333 },
+            { id: 2, nombre: 'Repartidor 2', lat: -15.5033, lng: -70.1344 },
+            { id: 3, nombre: 'Repartidor 3', lat: -15.5068, lng: -70.1370 },
+            { id: 4, nombre: 'Repartidor 4', lat: -15.5095, lng: -70.1299 },
+            { id: 5, nombre: 'Repartidor 5', lat: -15.5102, lng: -70.1360 },
+            { id: 6, nombre: 'Repartidor 6', lat: -15.5120, lng: -70.1301 },
+            { id: 7, nombre: 'Repartidor 7', lat: -15.5145, lng: -70.1320 }
+        ];
+
+        // Inicializar el mapa centrado en Juliaca
+        const map = L.map('map').setView([-15.4997, -70.1333], 14);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Añadir marcadores de repartidores al mapa
+        repartidores.forEach(rep => {
+            L.marker([rep.lat, rep.lng]).addTo(map)
+                .bindPopup(`${rep.nombre}`);
+        });
+
+        // Colores para los marcadores más cercanos
+        const colores = ['red', 'orange', 'yellow', 'green', 'blue'];
+
+        // Manejar clic en el mapa para encontrar repartidores cercanos
+        map.on('click', function(e) {
+            const { lat, lng } = e.latlng;
+            const repartidoresCercanos = buscarRepartidoresCercanos(lat, lng);
+
+            actualizarListaRepartidores(repartidoresCercanos);
+            actualizarMarcadores(repartidoresCercanos.slice(0, 5));
+        });
+
+        // Función para calcular la distancia entre dos puntos
+        function distancia(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Radio de la Tierra en km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        // Función para encontrar repartidores cercanos
+        function buscarRepartidoresCercanos(lat, lng) {
+            return repartidores.map(rep => ({
+                ...rep,
+                distancia: distancia(lat, lng, rep.lat, rep.lng)
+            })).sort((a, b) => a.distancia - b.distancia);
+        }
+
+        // Actualizar la lista de repartidores cercanos en la interfaz
+        function actualizarListaRepartidores(repartidoresCercanos) {
+            const lista = document.getElementById('lista-repartidores');
+            lista.innerHTML = '';
+            repartidoresCercanos.slice(0, 5).forEach((rep, index) => {
+                const li = document.createElement('li');
+                li.textContent = `${rep.nombre} - ${rep.distancia.toFixed(2)} km`;
+                lista.appendChild(li);
+            });
+        }
+
+        
+        function actualizarMarcadores(repartidoresCercanos) {
+            repartidoresCercanos.forEach((rep, index) => {
+                const color = colores[index % colores.length];
+                const icon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white;"></div>`,
+                    iconSize: [24, 24]
+                });
+                L.marker([rep.lat, rep.lng], { icon }).addTo(map)
+                    .bindPopup(`${rep.nombre} - ${rep.distancia.toFixed(2)} km`);
+            });
+        }
+    </script>
+</body>
+</html>
+
+
+

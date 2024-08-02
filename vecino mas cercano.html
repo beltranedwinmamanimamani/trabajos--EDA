@@ -1,9 +1,9 @@
-
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Robot Autonomous Path Planning</title>
+    <title>Nearest Neighbor Search with KD-Tree</title>
     <style>
         canvas {
             border: 1px solid black;
@@ -11,6 +11,7 @@
     </style>
 </head>
 <body>
+    <h1>Nearest Neighbor Search with KD-Tree</h1>
     <canvas id="canvas" width="800" height="600"></canvas>
     <script>
         class KDTree {
@@ -21,54 +22,59 @@
                     this.right = null;
                     return;
                 }
-
+                
                 const axis = depth % 2;
                 points.sort((a, b) => a[axis] - b[axis]);
                 const median = Math.floor(points.length / 2);
-
+                
                 this.node = points[median];
                 this.left = new KDTree(points.slice(0, median), depth + 1);
                 this.right = new KDTree(points.slice(median + 1), depth + 1);
             }
-
+            
             nearestNeighbor(point, depth = 0, best = null, bestDist = Infinity) {
                 if (this.node === null) return best;
-
+                
                 const axis = depth % 2;
                 const nextBranch = point[axis] < this.node[axis] ? this.left : this.right;
                 const oppositeBranch = point[axis] < this.node[axis] ? this.right : this.left;
-
+                
                 let nearest = best;
                 let nearestDist = bestDist;
-
+                
                 const distance = this.distance(point, this.node);
                 if (distance < nearestDist) {
                     nearest = this.node;
                     nearestDist = distance;
                 }
-
+                
                 nearest = nextBranch.nearestNeighbor(point, depth + 1, nearest, nearestDist);
-
+                
                 if (Math.abs(point[axis] - this.node[axis]) < nearestDist) {
                     nearest = oppositeBranch.nearestNeighbor(point, depth + 1, nearest, nearestDist);
                 }
-
+                
                 return nearest;
             }
-
+            
             distance(point1, point2) {
                 return Math.sqrt((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2);
             }
         }
-
+        
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-
-        const points = generateRandomPoints(100, canvas.width, canvas.height);  // Genera puntos de obstáculos
+        
+        // Genera puntos aleatorios
+        const points = generateRandomPoints(50, canvas.width, canvas.height);
+        
+        // Crea el KD-Tree
         const kdTree = new KDTree(points);
-        const start = [50, 50];
-        const end = [750, 550];
-
+        
+        // Punto de prueba para buscar el vecino más cercano
+        const testPoint = [400, 300];
+        
+        // Función para generar puntos aleatorios
         function generateRandomPoints(n, width, height) {
             const points = [];
             for (let i = 0; i < n; i++) {
@@ -76,14 +82,16 @@
             }
             return points;
         }
-
+        
+        // Función para dibujar un punto en el lienzo
         function drawPoint(point, color = 'black') {
             ctx.beginPath();
-            ctx.arc(point[0], point[1], 3, 0, 2 * Math.PI);
+            ctx.arc(point[0], point[1], 5, 0, 2 * Math.PI);
             ctx.fillStyle = color;
             ctx.fill();
         }
-
+        
+        // Función para dibujar una línea entre dos puntos en el lienzo
         function drawLine(from, to, color = 'blue') {
             ctx.beginPath();
             ctx.moveTo(from[0], from[1]);
@@ -91,7 +99,8 @@
             ctx.strokeStyle = color;
             ctx.stroke();
         }
-
+        
+        // Función para dibujar el KD-Tree en el lienzo
         function drawKDTree(tree, minX, maxX, minY, maxY, depth = 0) {
             if (!tree.node) return;
             const [x, y] = tree.node;
@@ -105,39 +114,27 @@
                 drawKDTree(tree.right, minX, maxX, y, maxY, depth + 1);
             }
         }
-
-        function planRoute(start, end) {
-            let current = start;
-            const visited = new Set();
-
-            while (true) {
-                const nearest = kdTree.nearestNeighbor(current);
-
-                if (!nearest || visited.has(nearest.toString())) {
-                    drawLine(current, end, 'green');
-                    break;
-                }
-
-                drawLine(current, nearest, 'green');
-                current = nearest;
-                visited.add(current.toString());
-
-                if (kdTree.distance(current, end) < 10) {
-                    drawLine(current, end, 'green');
-                    break;
-                }
-            }
-        }
-
-        // Dibuja puntos, árbol y ruta
+        
+        // Dibuja los puntos generados aleatoriamente
         points.forEach(point => drawPoint(point));
-        drawPoint(start, 'blue');
-        drawPoint(end, 'blue');
+        
+        // Dibuja el KD-Tree en el lienzo
         drawKDTree(kdTree, 0, canvas.width, 0, canvas.height);
-        planRoute(start, end);
+        
+        // Dibuja el punto de prueba
+        drawPoint(testPoint, 'blue');
+        
+        // Busca el vecino más cercano al punto de prueba usando el KD-Tree
+        const nearest = kdTree.nearestNeighbor(testPoint);
+        
+        // Dibuja la línea desde el punto de prueba al vecino más cercano encontrado
+        drawLine(testPoint, nearest, 'green');
+        
     </script>
 </body>
 </html>
+
+
 
 
 

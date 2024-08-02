@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KD-Tree Construction Example</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+        #controls {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas" width="800" height="600"></canvas>
+    <div id="controls">
+        <button onclick="buildKDTree()">Construir KD-Tree</button>
+    </div>
+    <script>
+        class KDTree {
+            constructor(points, depth = 0) {
+                if (points.length === 0) {
+                    this.node = null;
+                    this.left = null;
+                    this.right = null;
+                    return;
+                }
+
+                const axis = depth % 2; // Alternar entre eje x (0) y eje y (1)
+                points.sort((a, b) => a[axis] - b[axis]); // Ordenar puntos según el eje actual
+                const median = Math.floor(points.length / 2);
+
+                this.node = points[median];
+                this.left = new KDTree(points.slice(0, median), depth + 1);
+                this.right = new KDTree(points.slice(median + 1), depth + 1);
+            }
+        }
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        const points = generateRandomPoints(10, canvas.width, canvas.height);
+
+        function generateRandomPoints(n, width, height) {
+            const points = [];
+            for (let i = 0; i < n; i++) {
+                points.push([Math.random() * width, Math.random() * height]);
+            }
+            return points;
+        }
+
+        function drawPoint(point, color = 'black') {
+            ctx.beginPath();
+            ctx.arc(point[0], point[1], 5, 0, 2 * Math.PI);
+            ctx.fillStyle = color;
+            ctx.fill();
+        }
+
+        function drawLine(from, to, color = 'blue') {
+            ctx.beginPath();
+            ctx.moveTo(from[0], from[1]);
+            ctx.lineTo(to[0], to[1]);
+            ctx.strokeStyle = color;
+            ctx.stroke();
+        }
+
+        function drawKDTree(tree, minX, maxX, minY, maxY, depth = 0) {
+            if (!tree.node) return;
+
+            const [x, y] = tree.node;
+            drawPoint([x, y], 'red');
+
+            if (depth % 2 === 0) { // Dividir según el eje X
+                drawLine([x, minY], [x, maxY], 'red');
+                drawKDTree(tree.left, minX, x, minY, maxY, depth + 1);
+                drawKDTree(tree.right, x, maxX, minY, maxY, depth + 1);
+            } else { // Dividir según el eje Y
+                drawLine([minX, y], [maxX, y], 'blue');
+                drawKDTree(tree.left, minX, maxX, minY, y, depth + 1);
+                drawKDTree(tree.right, minX, maxX, y, maxY, depth + 1);
+            }
+        }
+
+        function buildKDTree() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Limpiar lienzo
+
+            points.forEach(point => drawPoint(point, 'black')); // Dibujar puntos iniciales
+
+            const kdTree = new KDTree(points);
+            drawKDTree(kdTree, 0, canvas.width, 0, canvas.height); // Dibujar KD-Tree
+        }
+    </script>
+</body>
+</html>

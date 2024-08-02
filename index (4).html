@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CRUD con React, Node.js y Firebase</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+    }
+    .container {
+      max-width: 500px;
+      margin: 40px auto;
+      background-color: #fff;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    .title {
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .form-control {
+      width: 100%;
+      height: 40px;
+      margin-bottom: 20px;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+    }
+    .btn {
+      background-color: #4CAF50;
+      color: #fff;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background-color: #3e8e41;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="title">CRUD con React, Node.js y Firebase</h1>
+    <form>
+      <input type="text" class="form-control" id="new-item" placeholder="Nuevo item" />
+      <button class="btn" id="create-item">Crear</button>
+    </form>
+    <ul id="items-list">
+      <!-- Items list will be rendered here -->
+    </ul>
+  </div>
+
+  <script type="text/babel">
+    // Configuración de Firebase
+    const firebaseConfig = {
+      // Agrega aquí tus credenciales de Firebase
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Componente React para el CRUD
+    class CrudApp extends React.Component {
+      constructor(props) {
+        super(props);
+        this.state = {
+          items: []
+        };
+      }
+
+      componentDidMount() {
+        this.fetchItems();
+      }
+
+      fetchItems = () => {
+        db.collection('items').onSnapshot(snapshot => {
+          const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          this.setState({ items });
+        });
+      };
+
+      handleInputChange = event => {
+        this.setState({ newItem: event.target.value });
+      };
+
+      createItem = () => {
+        db.collection('items').add({ name: this.state.newItem });
+        this.setState({ newItem: '' });
+      };
+
+      deleteItem = id => {
+        db.collection('items').doc(id).delete();
+      };
+
+      render() {
+        return (
+          <div>
+            <h1 class="title">CRUD con React, Node.js y Firebase</h1>
+            <form>
+              <input type="text" value={this.state.newItem} onChange={this.handleInputChange} class="form-control" id="new-item" placeholder="Nuevo item" />
+              <button class="btn" id="create-item" onClick={this.createItem}>Crear</button>
+            </form>
+            <ul id="items-list">
+              {this.state.items.map(item => (
+                <li key={item.id}>
+                  {item.name}
+                  <button class="btn" onClick={() => this.deleteItem(item.id)}>Eliminar</button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      }
+    }
+
+   
+  </script>
+</body>
+</html>
+

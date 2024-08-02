@@ -1,0 +1,192 @@
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BKTree with Levenshtein Distance Example</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        padding: 20px;
+    }
+
+    h1 {
+        margin-bottom: 20px;
+    }
+
+    p {
+        margin-bottom: 10px;
+    }
+
+    input[type="text"] {
+        padding: 8px;
+        font-size: 16px;
+    }
+
+    button {
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+    }
+
+    button:hover {
+        background-color: #45a049;
+    }
+
+    #results {
+        margin-top: 20px;
+    }
+
+    ul {
+        list-style-type: none;
+        padding: 0;
+    }
+
+    li {
+        margin-bottom: 5px;
+    }
+
+    .distance {
+        color: #888;
+        font-size: 14px;
+    }
+</style>
+</head>
+<body>
+
+<h1 style="color: blue;">CORRECCION DE NOMBRES DE USUARIO</h1>
+
+<p style="color: red;">Ingrese un nombre de usuario para encontrar sugerencias de nombres similares:</p>
+
+<input type="text" id="usernameInput" placeholder="Ingrese un nombre...">
+<button onclick="buscarNombresSimilares()">Buscar</button>
+
+<div id="results">
+    <!-- Aqui se mostraran los resultados -->
+</div>
+
+<script>
+// Funcion de distancia de Levenshtein
+function levenshteinDistance(a, b) {
+    const matrix = [];
+    for (let i = 0; i <= b.length; i++) {
+        matrix[i] = [i];
+    }
+    for (let j = 0; j <= a.length; j++) {
+        matrix[0][j] = j;
+    }
+    for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+            if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+            } else {
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j - 1] + 1,
+                    Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1)
+                );
+            }
+        }
+    }
+    return matrix[b.length][a.length];
+}
+
+// Definicion de la clase Node para el arbol BK
+class Node {
+    constructor(point) {
+        this.point = point;
+        this.children = {};
+    }
+}
+
+// Definicion de la clase BKTree
+class BKTree {
+    constructor(distanceFunc) {
+        this.root = null;
+        this.distanceFunc = distanceFunc;
+    }
+
+    add(point) {
+        if (this.root === null) {
+            this.root = new Node(point);
+        } else {
+            this._add(this.root, point);
+        }
+    }
+
+    _add(node, point) {
+        const dist = this.distanceFunc(node.point, point);
+        if (node.children[dist] === undefined) {
+            node.children[dist] = new Node(point);
+        } else {
+            this._add(node.children[dist], point);
+        }
+    }
+
+    search(point, maxDistance) {
+        const results = [];
+        this._search(this.root, point, maxDistance, results);
+        return results;
+    }
+
+    _search(node, point, maxDistance, results) {
+        const dist = this.distanceFunc(node.point, point);
+        if (dist <= maxDistance) {
+            results.push({ point: node.point, distance: dist });
+        }
+        for (let d = Math.max(0, dist - maxDistance); d <= dist + maxDistance; d++) {
+            if (node.children[d] !== undefined) {
+                this._search(node.children[d], point, maxDistance, results);
+            }
+        }
+    }
+}
+
+// Lista de nombres de ejemplo
+const names = ["Alicia", "Bobi", "Fredi", "David","Edwin"];
+
+// Crear el arbol BK con la distancia de Levenshtein
+const tree = new BKTree(levenshteinDistance);
+
+// Agregar nombres al arbol
+names.forEach(name => tree.add(name));
+
+// Funcion para buscar nombres similares y mostrar resultados
+function buscarNombresSimilares() {
+    const queryName = document.getElementById('usernameInput').value.trim();
+    const maxDistance = 2; // Distancia de Levenshtein maxima permitida
+
+    if (queryName === '') {
+        alert('Por favor ingrese un nombre valido.');
+        return;
+    }
+
+    const similarNames = tree.search(queryName, maxDistance);
+
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.innerHTML = ''; // Limpiar resultados anteriores
+
+    if (similarNames.length === 0) {
+        resultsDiv.innerHTML = '<p>No se encontraron nombres similares.</p>';
+    } else {
+        const resultList = document.createElement('ul');
+        similarNames.forEach(item => {
+            const listItem = document.createElement('li');
+            listItem.textContent = item.point;
+            const distanceSpan = document.createElement('span');
+            distanceSpan.textContent = `(distancia: ${item.distance})`;
+            distanceSpan.classList.add('distance');
+            listItem.appendChild(distanceSpan);
+            resultList.appendChild(listItem);
+        });
+        resultsDiv.appendChild(resultList);
+    }
+}
+</script>
+
+</body>
+</html>

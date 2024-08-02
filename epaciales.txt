@@ -1,0 +1,150 @@
+
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RESTAURANTE MAS CERCANO EN LA CIUDAD DE JULIACA SAN ROMAN</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #map {
+            width: 80%;
+            height: 500px;
+            margin: 20px 0;
+        }
+
+        .container {
+            width: 80%;
+        }
+
+        .nearby-restaurants {
+            margin-top: 20px;
+        }
+
+        h1 {
+            color: #2E8B57; /* Verde */
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        h2 {
+            color: #8B0000; /* Rojo oscuro */
+        }
+    </style>
+</head>
+<body>
+    <h1>RESTAURANTE MAS CERCANO EN LA CIUDAD DE JULIACA SAN ROMAN</h1>
+    <div id="map"></div>
+    <div class="container">
+        <h2>Restaurantes Cercanos</h2>
+        <div class="nearby-restaurants"></div>
+    </div>
+    
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        class Restaurant {
+            constructor(name, latitude, longitude) {
+                this.name = name;
+                this.latitude = latitude;
+                this.longitude = longitude;
+            }
+        }
+
+        class Grid {
+            constructor(size) {
+                this.size = size;
+                this.cells = new Map();
+            }
+
+            getCellKey(latitude, longitude) {
+                const x = Math.floor(latitude / this.size);
+                const y = Math.floor(longitude / this.size);
+                return `${x},${y}`;
+            }
+
+            addRestaurant(restaurant) {
+                const key = this.getCellKey(restaurant.latitude, restaurant.longitude);
+                if (!this.cells.has(key)) {
+                    this.cells.set(key, []);
+                }
+                this.cells.get(key).push(restaurant);
+            }
+
+            getNearbyRestaurants(latitude, longitude) {
+                const x = Math.floor(latitude / this.size);
+                const y = Math.floor(longitude / this.size);
+                const nearbyRestaurants = [];
+                for (let dx = -1; dx <= 1; dx++) {
+                    for (let dy = -1; dy <= 1; dy++) {
+                        const key = `${x + dx},${y + dy}`;
+                        if (this.cells.has(key)) {
+                            nearbyRestaurants.push(...this.cells.get(key));
+                        }
+                    }
+                }
+                return nearbyRestaurants;
+            }
+        }
+
+        // Crear una cuadrícula con tamaño de celda 0.001
+        const grid = new Grid(0.001);
+
+        // Añadir restaurantes a la cuadrícula
+        const restaurants = [
+            new Restaurant("Restaurante A", -15.4997, -70.1333),
+            new Restaurant("Restaurante B", -15.4998, -70.1332),
+            new Restaurant("Restaurante C", -15.4999, -70.1334),
+            new Restaurant("Restaurante D", -15.4996, -70.1335),
+            new Restaurant("Restaurante E", -15.4995, -70.1333),
+            new Restaurant("Restaurante F", -15.4994, -70.1336)
+        ];
+
+        restaurants.forEach(restaurant => grid.addRestaurant(restaurant));
+
+        // Inicializar el mapa
+        const map = L.map('map').setView([-15.4997, -70.1333], 15);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Añadir marcadores de restaurantes al mapa
+        restaurants.forEach(restaurant => {
+            L.marker([restaurant.latitude, restaurant.longitude])
+                .addTo(map)
+                .bindPopup(`<b>${restaurant.name}</b>`);
+        });
+
+        // Buscar restaurantes cercanos a una ubicación específica
+        const userLocation = { latitude: -15.4997, longitude: -70.1333 };
+        const nearbyRestaurants = grid.getNearbyRestaurants(userLocation.latitude, userLocation.longitude);
+
+        // Mostrar restaurantes cercanos en la lista
+        const nearbyRestaurantsContainer = document.querySelector('.nearby-restaurants');
+        nearbyRestaurantsContainer.innerHTML = nearbyRestaurants.map(restaurant => `
+            <p>${restaurant.name} en (${restaurant.latitude}, ${restaurant.longitude})</p>
+        `).join('');
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

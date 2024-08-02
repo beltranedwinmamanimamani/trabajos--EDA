@@ -1,0 +1,178 @@
+
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quad Tree Image </title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+        }
+        .container {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .canvas-container {
+            text-align: center;
+        }
+        canvas {
+            border: 1px solid black;
+            margin-top: 10px;
+        }
+        .controls {
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Quad Tree Imagen</h1>
+    <div class="container">
+        <div class="canvas-container">
+            <h2>Imagen Original</h2>
+            <canvas id="original-image" width="500" height="500"></canvas>
+        </div>
+        <div class="canvas-container">
+            <h2>Imagen Reconstruida</h2>
+            <canvas id="reconstructed-image" width="500" height="500"></canvas>
+        </div>
+    </div>
+    <div class="controls">
+        <button id="rebuildButton">Reconstruir Imagen</button>
+    </div>
+
+    <script>
+        // Función para dividir la imagen en cuadrantes recursivamente
+        function divideImage(imageData, x, y, w, h, threshold) {
+            if (w <= 1 || h <= 1) {
+                return [[x, y, w, h]];
+            }
+
+            let regions = [];
+            let halfWidth = Math.floor(w / 2);
+            let halfHeight = Math.floor(h / 2);
+
+            // Dividir la imagen en cuatro cuadrantes
+            regions.push(divideImage(imageData, x, y, halfWidth, halfHeight, threshold));
+            regions.push(divideImage(imageData, x + halfWidth, y, halfWidth, halfHeight, threshold));
+            regions.push(divideImage(imageData, x, y + halfHeight, halfWidth, halfHeight, threshold));
+            regions.push(divideImage(imageData, x + halfWidth, y + halfHeight, halfWidth, halfHeight, threshold));
+
+            // Filtrar las regiones que no sean homogéneas
+            regions = regions.filter(region => {
+                let pixelCount = 0;
+                let sum = 0;
+                for (let i = 0; i < region.length; i++) {
+                    let pixel = imageData[(region[i][1] * imageData.width + region[i][0]) * 4]; // Se multiplica por 4 para acceder a los canales RGBA
+                    pixelCount++;
+                    sum += pixel;
+                }
+                let average = sum / pixelCount;
+                return Math.abs(average - imageData[(region[0][1] * imageData.width + region[0][0]) * 4]) <= threshold;
+            });
+
+            return regions;
+        }
+
+       
+        function buildQuadTree(imageData, regions) {
+            let quadTree = [];
+            for (let i = 0; i < regions.length; i++) {
+                let region = regions[i];
+                let node = {
+                    x: region[0],
+                    y: region[1],
+                    w: region[2],
+                    h: region[3],
+                    color: [
+                        imageData[(region[1] * imageData.width + region[0]) * 4],         // Red
+                        imageData[(region[1] * imageData.width + region[0]) * 4 + 1],     // Green
+                        imageData[(region[1] * imageData.width + region[0]) * 4 + 2]      // Blue
+                    ]
+                };
+                quadTree.push(node);
+            }
+            return quadTree;
+        }
+
+        // Función para reconstruir la imagen a partir del Quad Tree
+        function reconstructImage(quadTree, canvas) {
+            let ctx = canvas.getContext('2d');
+            let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            for (let i = 0; i < quadTree.length; i++) {
+                let node = quadTree[i];
+                for (let y = node.y; y < node.y + node.h; y++) {
+                    for (let x = node.x; x < node.x + node.w; x++) {
+                        let index = (y * imageData.width + x) * 4;
+                        imageData.data[index] = node.color[0];
+                        imageData.data[index + 1] = node.color[1];
+                        imageData.data[index + 2] = node.color[2];
+                        imageData.data[index + 3] = 255;
+                    }
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        // Cargar la imagen y construir el Quad Tree al cargar la página
+        let originalCanvas = document.getElementById('original-image');
+        let reconstructedCanvas = document.getElementById('reconstructed-image');
+        let ctx = originalCanvas.getContext('2d');
+        let image = new Image();
+        image.onload = function() {
+            ctx.drawImage(image, 0, 0, originalCanvas.width, originalCanvas.height);
+            let imageData = ctx.getImageData(0, 0, originalCanvas.width, originalCanvas.height).data;
+
+            let regions = divideImage(imageData, 0, 0, originalCanvas.width, originalCanvas.height, 10);
+            let quadTree = buildQuadTree(imageData, regions);
+            reconstructImage(quadTree, reconstructedCanvas);
+        };
+
+        
+        image.src = 'gaton.jpg'; 
+
+        // Botón para reconstruir la imagen cuando se haga clic
+        let rebuildButton = document.getElementById('rebuildButton');
+        rebuildButton.addEventListener('click', () => {
+            ctx.clearRect(0, 0, originalCanvas.width, originalCanvas.height);
+            reconstructedCanvas.getContext('2d').clearRect(0, 0, reconstructedCanvas.width, reconstructedCanvas.height);
+            ctx.drawImage(image, 0, 0, originalCanvas.width, originalCanvas.height);
+
+            let imageData = ctx.getImageData(0, 0, originalCanvas.width, originalCanvas.height).data;
+            let regions = divideImage(imageData, 0, 0, originalCanvas.width, originalCanvas.height, 10);
+            let quadTree = buildQuadTree(imageData, regions);
+            reconstructImage(quadTree, reconstructedCanvas);
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

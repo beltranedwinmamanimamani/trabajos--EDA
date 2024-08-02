@@ -1,0 +1,204 @@
+
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualización de Quad Tree</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: '#ff0000';
+            margin: 0;
+            padding: 0;
+        }
+        #container {
+            text-align: center;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        input[type="file"] {
+            display: block;
+            margin: 20px auto;
+            padding: 10px;
+            border: 2px solid #333;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            background-color: #ddd;
+            color: #333;
+        }
+        input[type="file"]:hover {
+            background-color: #ccc;
+        }
+        label, input[type="number"] {
+            font-size: 16px;
+            margin: 10px;
+            display: block;
+            text-align: center;
+        }
+        input[type="number"] {
+            padding: 5px;
+            border: 2px solid #333;
+            border-radius: 5px;
+            text-align: center;
+            width: 60px;
+            margin: 10px auto;
+            background-color: #fff;
+            color: #333;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        canvas {
+            border: 2px solid #333;
+            display: block;
+            margin: 20px auto;
+            background-color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <h1> Quad Tree</h1>
+        <input type="file" id="upload" accept="image/*">
+        <label for="threshold">Entrada:</label>
+        <input type="number" id="threshold" value="50" min="0" max="255">
+        <button onclick="processImage()">Procesar Imagen</button>
+        <canvas id="canvas" width="512" height="512"></canvas>
+    </div>
+    <script>
+        class QuadTree {
+            constructor(x, y, width, height, threshold, depth = 0) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.threshold = threshold;
+                this.depth = depth;
+                this.isLeaf = false;
+                this.children = [];
+                this.mean = null;
+            }
+
+            isHomogeneous(imageData) {
+                let total = 0;
+                let count = 0;
+                for (let i = this.y; i < this.y + this.height; i++) {
+                    for (let j = this.x; j < this.x + this.width; j++) {
+                        let index = (i * imageData.width + j) * 4;
+                        let intensity = imageData.data[index];
+                        total += intensity;
+                        count++;
+                    }
+                }
+                let mean = total / count;
+                this.mean = mean;
+
+                let variance = 0;
+                for (let i = this.y; i < this.y + this.height; i++) {
+                    for (let j = this.x; j < this.x + this.width; j++) {
+                        let index = (i * imageData.width + j) * 4;
+                        let intensity = imageData.data[index];
+                        variance += Math.pow(intensity - mean, 2);
+                    }
+                }
+                variance /= count;
+
+                return variance <= this.threshold;
+            }
+
+            subdivide(imageData) {
+                if (this.width <= 1 || this.height <= 1 || this.isHomogeneous(imageData)) {
+                    this.isLeaf = true;
+                    return;
+                }
+
+                let halfWidth = Math.floor(this.width / 2);
+                let halfHeight = Math.floor(this.height / 2);
+
+                this.children.push(new QuadTree(this.x, this.y, halfWidth, halfHeight, this.threshold, this.depth + 1));
+                this.children.push(new QuadTree(this.x + halfWidth, this.y, halfWidth, halfHeight, this.threshold, this.depth + 1));
+                this.children.push(new QuadTree(this.x, this.y + halfHeight, halfWidth, halfHeight, this.threshold, this.depth + 1));
+                this.children.push(new QuadTree(this.x + halfWidth, this.y + halfHeight, halfWidth, halfHeight, this.threshold, this.depth + 1));
+
+                for (let child of this.children) {
+                    child.subdivide(imageData);
+                }
+            }
+
+            draw(context) {
+                if (this.isLeaf) {
+                    context.fillStyle = `rgb(${this.mean}, ${this.mean}, ${this.mean})`;
+                    context.fillRect(this.x, this.y, this.width, this.height);
+                    context.strokeStyle = this.getColorByDepth(); // Color de la línea de división
+                    context.strokeRect(this.x, this.y, this.width, this.height);
+                } else {
+                    for (let child of this.children) {
+                        child.draw(context);
+                    }
+                }
+            }
+
+            getColorByDepth() {
+                const colors = [
+                    '#ff0000', // rojo
+                    '#00ff00', // verde
+                    '#0000ff', // azul
+                    '#ffff00', // amarillo
+                    '#ff00ff', // magenta
+                    '#00ffff', // cian
+                    '#000000', // negro
+                    '#ffffff'  // blanco
+                ];
+                return colors[this.depth % colors.length];
+            }
+        }
+
+        function processImage() {
+            const fileInput = document.getElementById('upload');
+            const thresholdInput = document.getElementById('threshold');
+            const threshold = parseInt(thresholdInput.value, 10);
+            const canvas = document.getElementById('canvas');
+            const context = canvas.getContext('2d');
+
+            if (fileInput.files && fileInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = new Image();
+                    img.onload = function () {
+                        // Ajustar el canvas al tamaño de la imagen
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+
+                        // Dibujar la imagen en el canvas
+                        context.drawImage(img, 0, 0, img.width, img.height);
+                        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                        const quadTree = new QuadTree(0, 0, canvas.width, canvas.height, threshold);
+                        quadTree.subdivide(imageData);
+                        context.clearRect(0, 0, canvas.width, canvas.height);
+                        quadTree.draw(context);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(fileInput.files[0]);
+            }
+        }
+    </script>
+</body>
+</html>
+
+
+
+

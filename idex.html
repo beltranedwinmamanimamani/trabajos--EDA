@@ -1,113 +1,348 @@
-
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Consulta de Proximidad de Repartidores</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <title>Árbol Binario con Eliminación y Búsqueda Visual</title>
     <style>
-        #map {
-            height: 600px;
-            width: 100%;
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
         }
-        #repartidores {
-            margin-top: 20px;
+        #container {
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        button {
+            margin: 5px;
+        }
+        #canvas {
+            border: 1px solid #000;
         }
     </style>
 </head>
 <body>
-    <h1>Encuentra el Repartidor mas Cercano-en la Provincia de San Roman Juliaca</h1>
-    <div id="map"></div>
-    <div id="repartidores">
-        <h2>Repartidores Cercanos</h2>
-        <ul id="lista-repartidores"></ul>
+    <h1 style="color: blue;">Árbol Binario con Eliminación y Búsqueda Visual</h1>
+    <div id="container">
+        <input type="number" id="valueInput" placeholder="Ingresa un valor">
+        <button onclick="insertValue()">Insertar</button>
+        <button onclick="searchValue()">Buscar</button>
+        <button onclick="deleteValue()">Eliminar</button>
+        <button onclick="traverseTree()">Recorrer en Orden</button>
+        <button onclick="traverseTreeReverse()">Recorrer en Orden Inverso</button>
+        <button onclick="showMinMax()">Mostrar Mínimo y Máximo</button>
+        <p id="output"></p>
     </div>
 
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <div id="treeContainer">
+        <h2 style="color: blue;">Visualización del Árbol</h2>
+        <canvas id="canvas" width="800" height="600"></canvas>
+    </div>
+
     <script>
-        // Definir los repartidores con coordenadas de ejemplo para Juliaca
-        const repartidores = [
-            { id: 1, nombre: 'Repartidor 1', lat: -15.4997, lng: -70.1333 },
-            { id: 2, nombre: 'Repartidor 2', lat: -15.5033, lng: -70.1344 },
-            { id: 3, nombre: 'Repartidor 3', lat: -15.5068, lng: -70.1370 },
-            { id: 4, nombre: 'Repartidor 4', lat: -15.5095, lng: -70.1299 },
-            { id: 5, nombre: 'Repartidor 5', lat: -15.5102, lng: -70.1360 },
-            { id: 6, nombre: 'Repartidor 6', lat: -15.5120, lng: -70.1301 },
-            { id: 7, nombre: 'Repartidor 7', lat: -15.5145, lng: -70.1320 }
-        ];
-
-        // Inicializar el mapa centrado en Juliaca
-        const map = L.map('map').setView([-15.4997, -70.1333], 14);
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
-
-        // A�adir marcadores de repartidores al mapa
-        repartidores.forEach(rep => {
-            L.marker([rep.lat, rep.lng]).addTo(map)
-                .bindPopup(`${rep.nombre}`);
-        });
-
-        // Colores para los marcadores m�s cercanos
-        const colores = ['red', 'orange', 'yellow', 'green', 'blue'];
-
-        // Manejar clic en el mapa para encontrar repartidores cercanos
-        map.on('click', function(e) {
-            const { lat, lng } = e.latlng;
-            const repartidoresCercanos = buscarRepartidoresCercanos(lat, lng);
-
-            actualizarListaRepartidores(repartidoresCercanos);
-            actualizarMarcadores(repartidoresCercanos.slice(0, 5));
-        });
-
-        // Funci�n para calcular la distancia entre dos puntos
-        function distancia(lat1, lon1, lat2, lon2) {
-            const R = 6371; // Radio de la Tierra en km
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return R * c;
+        class Node {
+            constructor(value) {
+                this.value = value;
+                this.left = null;
+                this.right = null;
+            }
         }
 
-        // Funci�n para encontrar repartidores cercanos
-        function buscarRepartidoresCercanos(lat, lng) {
-            return repartidores.map(rep => ({
-                ...rep,
-                distancia: distancia(lat, lng, rep.lat, rep.lng)
-            })).sort((a, b) => a.distancia - b.distancia);
+        class BinaryTree {
+            constructor() {
+                this.root = null;
+            }
+
+            insert(value) {
+                const newNode = new Node(value);
+                if (this.root === null) {
+                    this.root = newNode;
+                } else {
+                    this.insertNode(this.root, newNode);
+                }
+            }
+
+            insertNode(node, newNode) {
+                if (newNode.value < node.value) {
+                    if (node.left === null) {
+                        node.left = newNode;
+                    } else {
+                        this.insertNode(node.left, newNode);
+                    }
+                } else {
+                    if (node.right === null) {
+                        node.right = newNode;
+                    } else {
+                        this.insertNode(node.right, newNode);
+                    }
+                }
+            }
+
+            search(value) {
+                return this.searchNode(this.root, value);
+            }
+
+            searchNode(node, value) {
+                if (node === null) {
+                    return false;
+                }
+                if (value < node.value) {
+                    return this.searchNode(node.left, value);
+                } else if (value > node.value) {
+                    return this.searchNode(node.right, value);
+                } else {
+                    return true;
+                }
+            }
+
+            delete(value) {
+                this.root = this.deleteNode(this.root, value);
+            }
+
+            deleteNode(node, value) {
+                if (node === null) {
+                    return null;
+                }
+
+                if (value < node.value) {
+                    node.left = this.deleteNode(node.left, value);
+                    return node;
+                } else if (value > node.value) {
+                    node.right = this.deleteNode(node.right, value);
+                    return node;
+                } else {
+                    // Caso 1: Nodo sin hijos
+                    if (node.left === null && node.right === null) {
+                        node = null;
+                        return node;
+                    }
+
+                    // Caso 2: Nodo con un hijo
+                    if (node.left === null) {
+                        node = node.right;
+                        return node;
+                    } else if (node.right === null) {
+                        node = node.left;
+                        return node;
+                    }
+
+                    // Caso 3: Nodo con dos hijos
+                    const minNode = this.findMinNode(node.right);
+                    node.value = minNode.value;
+                    node.right = this.deleteNode(node.right, minNode.value);
+                    return node;
+                }
+            }
+
+            findMinNode(node) {
+                if (node.left === null) {
+                    return node;
+                } else {
+                    return this.findMinNode(node.left);
+                }
+            }
+
+            findMaxNode(node) {
+                if (node.right === null) {
+                    return node;
+                } else {
+                    return this.findMaxNode(node.right);
+                }
+            }
+
+            inOrder(node, result = []) {
+                if (node !== null) {
+                    this.inOrder(node.left, result);
+                    result.push(node.value);
+                    this.inOrder(node.right, result);
+                }
+                return result;
+            }
+
+            inOrderReverse(node, result = []) {
+                if (node !== null) {
+                    this.inOrderReverse(node.right, result);
+                    result.push(node.value);
+                    this.inOrderReverse(node.left, result);
+                }
+                return result;
+            }
         }
 
-        // Actualizar la lista de repartidores cercanos en la interfaz
-        function actualizarListaRepartidores(repartidoresCercanos) {
-            const lista = document.getElementById('lista-repartidores');
-            lista.innerHTML = '';
-            repartidoresCercanos.slice(0, 5).forEach((rep, index) => {
-                const li = document.createElement('li');
-                li.textContent = `${rep.nombre} - ${rep.distancia.toFixed(2)} km`;
-                lista.appendChild(li);
-            });
+        const tree = new BinaryTree();
+
+        function insertValue() {
+            const value = parseInt(document.getElementById('valueInput').value);
+            if (!isNaN(value)) {
+                tree.insert(value);
+                document.getElementById('output').innerText = `Valor ${value} insertado.`;
+                drawTree(tree.root);
+            } else {
+                alert('Por favor, ingresa un valor válido.');
+            }
         }
 
-        
-        function actualizarMarcadores(repartidoresCercanos) {
-            repartidoresCercanos.forEach((rep, index) => {
-                const color = colores[index % colores.length];
-                const icon = L.divIcon({
-                    className: 'custom-div-icon',
-                    html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white;"></div>`,
-                    iconSize: [24, 24]
-                });
-                L.marker([rep.lat, rep.lng], { icon }).addTo(map)
-                    .bindPopup(`${rep.nombre} - ${rep.distancia.toFixed(2)} km`);
-            });
+        function searchValue() {
+            const value = parseInt(document.getElementById('valueInput').value);
+            if (!isNaN(value)) {
+                const startTime = performance.now(); // Marca el tiempo inicial
+                visualizeSearch(tree.root, value, []);
+            } else {
+                alert('Por favor, ingresa un valor válido.');
+            }
         }
+
+        function deleteValue() {
+            const value = parseInt(document.getElementById('valueInput').value);
+            if (!isNaN(value)) {
+                tree.delete(value);
+                document.getElementById('output').innerText = `Valor ${value} eliminado.`;
+                drawTree(tree.root);
+            } else {
+                alert('Por favor, ingresa un valor válido.');
+            }
+        }
+
+        function traverseTree() {
+            const result = tree.inOrder(tree.root);
+            document.getElementById('output').innerText = `Recorrido en orden: ${result.join(', ')}`;
+        }
+
+        function traverseTreeReverse() {
+            const result = tree.inOrderReverse(tree.root);
+            document.getElementById('output').innerText = `Recorrido en orden inverso: ${result.join(', ')}`;
+        }
+
+        function showMinMax() {
+            const minNode = tree.findMinNode(tree.root);
+            const maxNode = tree.findMaxNode(tree.root);
+
+            if (minNode && maxNode) {
+                document.getElementById('output').innerText = `Mínimo: ${minNode.value}, Máximo: ${maxNode.value}`;
+            } else {
+                document.getElementById('output').innerText = 'Árbol vacío.';
+            }
+        }
+
+        function drawTree(node, x = 400, y = 40, level = 0) {
+            const ctx = document.getElementById('canvas').getContext('2d');
+            ctx.clearRect(0, 0, 800, 600);
+            ctx.font = '16px Arial';
+
+            const drawNode = (node, x, y, level) => {
+                if (node === null) return;
+
+                const dx = 200 / (level + 1);
+                const dy = 80;
+
+                if (node.left !== null) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x - dx, y + dy);
+                    ctx.stroke();
+                    drawNode(node.left, x - dx, y + dy, level + 1);
+                }
+
+                if (node.right !== null) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x + dx, y + dy);
+                    ctx.stroke();
+                    drawNode(node.right, x + dx, y + dy, level + 1);
+                }
+
+                ctx.beginPath();
+                ctx.arc(x, y, 20, 0, 2 * Math.PI);
+                ctx.fillStyle = getNodeColor(node, level);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#000';
+                ctx.fillText(node.value, x - 5, y + 5);
+            };
+
+            drawNode(node, x, y, level);
+        }
+
+        function getNodeColor(node, level) {
+            if (node === tree.root) return '#FFD700'; // Color dorado para la raíz
+            return node.value < tree.root.value ? '#00BFFF' : '#FF4500'; // Azul para menores, rojo para mayores
+        }
+
+        function visualizeSearch(node, value, path) {
+            if (node === null) {
+                document.getElementById('output').innerText = `Valor ${value} no encontrado.`;
+                return;
+            }
+
+            path.push(node);
+            highlightNode(node);
+
+            const startTime = performance.now(); // Marca el tiempo inicial
+
+            setTimeout(() => {
+                if (value === node.value) {
+                    const endTime = performance.now(); // Marca el tiempo final
+                    const timeTaken = endTime - startTime; // Calcula el tiempo transcurrido
+                    document.getElementById('output').innerText = `Valor ${value} encontrado en ${timeTaken.toFixed(2)} ms.`;
+                } else if (value < node.value) {
+                    visualizeSearch(node.left, value, path);
+                } else {
+                    visualizeSearch(node.right, value, path);
+                }
+            }, 1000);
+        }
+
+        function highlightNode(node) {
+            const ctx = document.getElementById('canvas').getContext('2d');
+            const nodePos = findNodePosition(tree.root, node.value);
+            
+            if (nodePos) {
+                ctx.beginPath();
+                ctx.arc(nodePos.x, nodePos.y, 22, 0, 2 * Math.PI);
+                ctx.fillStyle = 'yellow';
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.arc(nodePos.x, nodePos.y, 20, 0, 2 * Math.PI);
+                ctx.fillStyle = getNodeColor(node, 0);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.fillStyle = '#000';
+                ctx.fillText(node.value, nodePos.x - 5, nodePos.y + 5);
+            }
+        }
+
+        function findNodePosition(node, value, x = 400, y = 40, level = 0) {
+            if (node === null) return null;
+            
+            if (node.value === value) {
+                return { x, y };
+            }
+            
+            const dx = 200 / (level + 1);
+            const dy = 80;
+            
+            if (value < node.value) {
+                return findNodePosition(node.left, value, x - dx, y + dy, level + 1);
+            } else {
+                return findNodePosition(node.right, value, x + dx, y + dy, level + 1);
+            }
+        }
+
+        // Insertar algunos valores iniciales para probar
+        const initialValues = [50, 30, 70, 20, 40, 60, 80];
+        initialValues.forEach(value => tree.insert(value));
+        drawTree(tree.root);
     </script>
 </body>
 </html>
-
 
 

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ejemplo de BK-Tree</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        input, button {
+            margin: 5px;
+        }
+        .add-section, .search-section, .results-section {
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 10px;
+        }
+        .add-section h2, .search-section h2, .results-section h2 {
+            color: #1e90ff;
+        }
+        .results-section ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .results-section li {
+            margin-bottom: 5px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            background-color: #f0f0f0;
+        }
+        .result-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .result-buttons button {
+            padding: 8px 12px;
+            background-color: #1e90ff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .result-buttons button:hover {
+            background-color: #0077cc;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="color: red;">Ejemplo de BK-Tree con Funciones Discretas</h1>
+    
+    <div class="add-section">
+        <h2>Agregar Producto</h2>
+        <label for="name">Nombre:</label>
+        <input type="text" id="name">
+        <br>
+        <label for="stock">Stock:</label>
+        <input type="number" id="stock">
+        <br>
+        <label for="reordered">Veces Reordenado:</label>
+        <input type="number" id="reordered">
+        <br>
+        <label for="category">Categoria:</label>
+        <input type="text" id="category">
+        <br>
+        <button onclick="addProduct()">Agregar Producto</button>
+    </div>
+
+    <div class="search-section">
+        <h2>Buscar Producto</h2>
+        <label for="searchName">Nombre:</label>
+        <input type="text" id="searchName">
+        <br>
+        <label for="searchStock">Stock:</label>
+        <input type="number" id="searchStock">
+        <br>
+        <label for="searchReordered">Veces Reordenado:</label>
+        <input type="number" id="searchReordered">
+        <br>
+        <label for="searchCategory">Categoria:</label>
+        <input type="text" id="searchCategory">
+        <br>
+        <label for="threshold">Umbral de Distancia:</label>
+        <input type="number" id="threshold" value="3">
+        <br>
+        <button onclick="searchProduct()">Buscar Producto</button>
+    </div>
+
+    <div class="results-section">
+        <h2>Resultados</h2>
+        <ul id="results"></ul>
+        <div class="result-buttons" id="searchedItems"></div>
+    </div>
+    
+    <script>
+        class BKTree {
+            constructor(metric) {
+                this.metric = metric;
+                this.root = null;
+            }
+
+            add(item) {
+                if (this.root === null) {
+                    this.root = { item: item, children: {} };
+                } else {
+                    let node = this.root;
+                    while (true) {
+                        const distance = this.metric(item, node.item);
+                        if (node.children[distance] === undefined) {
+                            node.children[distance] = { item: item, children: {} };
+                            break;
+                        } else {
+                            node = node.children[distance];
+                        }
+                    }
+                }
+            }
+
+            search(item, threshold) {
+                const results = [];
+                const searchNode = (node) => {
+                    const distance = this.metric(item, node.item);
+                    if (distance <= threshold) {
+                        results.push(node.item);
+                    }
+                    for (const key in node.children) {
+                        if (parseInt(key) >= distance - threshold && parseInt(key) <= distance + threshold) {
+                            searchNode(node.children[key]);
+                        }
+                    }
+                };
+                if (this.root !== null) {
+                    searchNode(this.root);
+                }
+                return results;
+            }
+        }
+
+        const products = [];
+        const productBKTree = new BKTree((a, b) => {
+            let distance = 0;
+            if (a.name !== b.name) distance++;
+            if (a.stock !== b.stock) distance++;
+            if (a.reordered !== b.reordered) distance++;
+            if (a.category !== b.category) distance++;
+            return distance;
+        });
+
+        function addProduct() {
+            const name = document.getElementById('name').value;
+            const stock = parseInt(document.getElementById('stock').value);
+            const reordered = parseInt(document.getElementById('reordered').value);
+            const category = document.getElementById('category').value;
+
+            const product = { name, stock, reordered, category };
+            products.push(product);
+            productBKTree.add(product);
+
+            alert(`Producto ${name} agregado exitosamente!`);
+        }
+
+        function searchProduct() {
+            const searchName = document.getElementById('searchName').value;
+            const searchStock = parseInt(document.getElementById('searchStock').value);
+            const searchReordered = parseInt(document.getElementById('searchReordered').value);
+            const searchCategory = document.getElementById('searchCategory').value;
+            const threshold = parseInt(document.getElementById('threshold').value);
+
+            const searchItem = { 
+                name: searchName, 
+                stock: searchStock, 
+                reordered: searchReordered, 
+                category: searchCategory 
+            };
+
+            const results = productBKTree.search(searchItem, threshold);
+
+            const resultsContainer = document.getElementById('results');
+            resultsContainer.innerHTML = '';
+
+            if (results.length === 0) {
+                resultsContainer.innerHTML = '<li>No se encontraron productos que coincidan con los criterios.</li>';
+            } else {
+                resultsContainer.innerHTML = results.map(product => `
+                    <li>${product.name} - Stock: ${product.stock}, Reordenado: ${product.reordered}, Categoría: ${product.category}</li>
+                `).join('');
+            }
+
+            // Mostrar lo que se está digitando
+            const searchedItems = document.getElementById('searchedItems');
+            searchedItems.innerHTML = `
+                <button>${searchName}</button>
+                <button>${searchStock}</button>
+                <button>${searchReordered}</button>
+                <button>${searchCategory}</button>
+                <button>${threshold}</button>
+            `;
+        }
+    </script>
+</body>
+</html>
+
+
+
+

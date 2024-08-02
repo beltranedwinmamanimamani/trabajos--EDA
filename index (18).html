@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Biblioteca con BST</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        input, button { margin: 5px 0; }
+        #resultado { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Sistema de Biblioteca con BST</h1>
+    
+    <h2>Buscar Libro</h2>
+    <input type="number" id="buscarId" placeholder="ID del libro" disabled>
+    <button onclick="buscarLibro()" disabled>Buscar Libro</button>
+
+    <h2>Insertar Libro</h2>
+    <input type="number" id="insertId" placeholder="ID del libro" disabled>
+    <input type="text" id="insertTitulo" placeholder="Título del libro" disabled>
+    <input type="text" id="insertAutor" placeholder="Autor del libro" disabled>
+    <button onclick="insertarLibro()" disabled>Insertar Libro</button>
+
+    <h2>Eliminar Libro</h2>
+    <input type="number" id="eliminarId" placeholder="ID del libro" disabled>
+    <button onclick="eliminarLibro()" disabled>Eliminar Libro</button>
+
+    <div id="resultado"></div>
+
+    <script>
+        class Nodo {
+            constructor(libro) {
+                this.libro = libro;
+                this.izquierda = null;
+                this.derecha = null;
+            }
+        }
+
+        class ArbolBinarioBusqueda {
+            constructor() {
+                this.raiz = null;
+            }
+
+            insertar(libro) {
+                libro.id = parseInt(libro.id);
+                this.raiz = this._insertarRecursivo(this.raiz, libro);
+            }
+
+            _insertarRecursivo(nodo, libro) {
+                if (nodo === null) {
+                    return new Nodo(libro);
+                }
+
+                if (libro.id < nodo.libro.id) {
+                    nodo.izquierda = this._insertarRecursivo(nodo.izquierda, libro);
+                } else if (libro.id > nodo.libro.id) {
+                    nodo.derecha = this._insertarRecursivo(nodo.derecha, libro);
+                }
+
+                return nodo;
+            }
+
+            buscar(id) {
+                return this._buscarRecursivo(this.raiz, parseInt(id));
+            }
+
+            _buscarRecursivo(nodo, id) {
+                if (nodo === null || nodo.libro.id === id) {
+                    return nodo ? nodo.libro : null;
+                }
+
+                if (id < nodo.libro.id) {
+                    return this._buscarRecursivo(nodo.izquierda, id);
+                }
+                return this._buscarRecursivo(nodo.derecha, id);
+            }
+
+            eliminar(id) {
+                this.raiz = this._eliminarRecursivo(this.raiz, parseInt(id));
+            }
+
+            _eliminarRecursivo(nodo, id) {
+                if (nodo === null) {
+                    return null;
+                }
+
+                if (id < nodo.libro.id) {
+                    nodo.izquierda = this._eliminarRecursivo(nodo.izquierda, id);
+                } else if (id > nodo.libro.id) {
+                    nodo.derecha = this._eliminarRecursivo(nodo.derecha, id);
+                } else {
+                    if (nodo.izquierda === null) {
+                        return nodo.derecha;
+                    } else if (nodo.derecha === null) {
+                        return nodo.izquierda;
+                    }
+
+                    nodo.libro = this._encontrarMinimo(nodo.derecha);
+                    nodo.derecha = this._eliminarRecursivo(nodo.derecha, nodo.libro.id);
+                }
+
+                return nodo;
+            }
+
+            _encontrarMinimo(nodo) {
+                let actual = nodo;
+                while (actual.izquierda !== null) {
+                    actual = actual.izquierda;
+                }
+                return actual.libro;
+            }
+        }
+
+        const bst = new ArbolBinarioBusqueda();
+
+        // Cargar libros desde PHP una sola vez al inicio
+        fetch('obtener_libros.php')
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(libro => {
+                    libro.id = parseInt(libro.id);
+                    bst.insertar(libro);
+                });
+                console.log('Libros cargados en BST:', data.length);
+                habilitarUI();
+            })
+            .catch(error => console.error('Error:', error));
+
+        function habilitarUI() {
+            document.getElementById('buscarId').disabled = false;
+            document.getElementById('insertId').disabled = false;
+            document.getElementById('insertTitulo').disabled = false;
+            document.getElementById('insertAutor').disabled = false;
+            document.getElementById('eliminarId').disabled = false;
+            document.querySelector('button[onclick="buscarLibro()"]').disabled = false;
+            document.querySelector('button[onclick="insertarLibro()"]').disabled = false;
+            document.querySelector('button[onclick="eliminarLibro()"]').disabled = false;
+        }
+
+        function mostrarResultado(mensaje) {
+            document.getElementById('resultado').innerHTML = mensaje;
+        }
+
+        function buscarLibro() {
+            const id = parseInt(document.getElementById('buscarId').value);
+            const libro = bst.buscar(id);
+
+            if (libro) {
+                mostrarResultado(`Libro encontrado: ID ${libro.id}, Título: ${libro.titulo}, Autor: ${libro.autor}`);
+            } else {
+                mostrarResultado(`No se encontró ningún libro con el ID ${id}`);
+            }
+        }
+
+        function insertarLibro() {
+            const id = parseInt(document.getElementById('insertId').value);
+            const titulo = document.getElementById('insertTitulo').value;
+            const autor = document.getElementById('insertAutor').value;
+
+            if (id && titulo && autor) {
+                const libro = {id, titulo, autor};
+                bst.insertar(libro);
+                mostrarResultado(`Libro insertado: ID ${id}, Título: ${titulo}, Autor: ${autor}`);
+            } else {
+                mostrarResultado('Error: Todos los campos son obligatorios');
+            }
+        }
+
+        function eliminarLibro() {
+            const id = parseInt(document.getElementById('eliminarId').value);
+            const libroAEliminar = bst.buscar(id);
+            if (libroAEliminar) {
+                bst.eliminar(id);
+                mostrarResultado(`Libro con ID ${id} eliminado correctamente`);
+            } else {
+                mostrarResultado(`No se encontró ningún libro con el ID ${id}`);
+            }
+        }
+    </script>
+</body>
+</html>
